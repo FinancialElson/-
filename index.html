@@ -3,78 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>退休複利模擬器</title>
+    <title>全生命週期退休模擬器</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --primary: #2563eb; --secondary: #f59e0b; --bg: #f8fafc; }
-        body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); padding: 20px; margin: 0; }
-        .container { display: grid; grid-template-columns: 350px 1fr; gap: 20px; max-width: 1200px; margin: 0 auto; }
+        :root { --primary: #2563eb; --secondary: #f59e0b; --danger: #ef4444; --success: #10b981; --bg: #f8fafc; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); padding: 15px; margin: 0; }
+        .container { display: grid; grid-template-columns: 360px 1fr; gap: 20px; max-width: 1400px; margin: 0 auto; }
         .card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        h3 { margin-top: 0; color: #1e293b; font-size: 1.2rem; }
-        .input-group { margin-bottom: 1rem; }
-        label { display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 5px; }
-        input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .stat-item { background: #f1f5f9; padding: 12px 5px; border-radius: 8px; text-align: center; }
-        .stat-val { font-size: 1.1rem; font-weight: bold; color: var(--primary); margin-top: 5px; }
-        .chart-container { position: relative; height: 450px; width: 100%; }
-        .info-tag { font-size: 0.8rem; color: #64748b; margin-top: 5px; display: block; }
-
-        @media (max-width: 900px) {
-            .container { grid-template-columns: 1fr; gap: 15px; }
-            .chart-container { height: 60vh; min-height: 380px; }
-        }
+        h3 { margin: 15px 0 10px 0; color: #1e293b; font-size: 1rem; border-left: 4px solid var(--primary); padding-left: 8px; }
+        h3:first-child { margin-top: 0; }
+        .input-group { margin-bottom: 0.8rem; }
+        label { display: block; font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px; }
+        input { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.95rem; }
+        
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 15px; }
+        .stat-item { background: #f1f5f9; padding: 10px; border-radius: 8px; text-align: center; }
+        .stat-val { font-size: 1rem; font-weight: bold; color: var(--primary); }
+        .depletion-warning { grid-column: span 2; background: #fff1f2; color: var(--danger); padding: 10px; border-radius: 8px; font-weight: bold; text-align: center; border: 1px solid #fecaca; }
+        
+        .chart-container { position: relative; height: 550px; width: 100%; }
+        @media (max-width: 900px) { .container { grid-template-columns: 1fr; } .chart-container { height: 60vh; } }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="card">
-        <h3>退休金參數設定</h3>
-        
+        <h3>1. 累積階段 (現在到退休)</h3>
         <div class="input-group">
-            <label>年齡設定 (現在 / 退休)</label>
-            <div style="display: flex; gap: 8px;">
+            <label>年齡 (現在 / 退休)</label>
+            <div style="display: flex; gap: 5px;">
                 <input type="number" id="currentAge" value="30" oninput="runSimulation()">
                 <input type="number" id="retireAge" value="65" oninput="runSimulation()">
             </div>
-            <span class="info-tag">預計投資年期：<span id="durationText">35</span> 年</span>
         </div>
-
         <div class="input-group">
             <label>初始本金 / 每月投入 ($)</label>
-            <div style="display: flex; gap: 8px;">
-                <input type="number" id="principal" value="100000" oninput="runSimulation()">
-                <input type="number" id="monthly" value="10000" oninput="runSimulation()">
-            </div>
-        </div>
-
-        <div class="input-group">
-            <label>預期年化 (股 / 債 / 通膨 %)</label>
             <div style="display: flex; gap: 5px;">
-                <input type="number" id="stockRet" value="10" oninput="runSimulation()">
-                <input type="number" id="bondRet" value="4" oninput="runSimulation()">
-                <input type="number" id="inflation" value="2.5" oninput="runSimulation()">
+                <input type="number" id="principal" value="100000" oninput="runSimulation()">
+                <input type="number" id="monthly" value="15000" oninput="runSimulation()">
             </div>
+        </div>
+        <div class="input-group">
+            <label>預期年化報酬率 (%)</label>
+            <input type="number" id="returnRate" value="7" step="0.1" oninput="runSimulation()">
         </div>
 
+        <h3>2. 提領階段 (退休後)</h3>
         <div class="input-group">
-            <label>資產配置 (股票 %)</label>
-            <input type="range" id="stockPct" min="0" max="100" value="80" oninput="runSimulation()">
-            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #64748b;">
-                <span>股票 <span id="sLabel">80</span>%</span>
-                <span>債券 <span id="bLabel">20</span>%</span>
-            </div>
+            <label>退休後每月生活費 (今日物價)</label>
+            <input type="number" id="retireExpense" value="50000" oninput="runSimulation()">
         </div>
-        
+        <div class="input-group">
+            <label>每月政府年金 (勞保+勞退預估)</label>
+            <input type="number" id="pension" value="25000" oninput="runSimulation()">
+        </div>
+        <div class="input-group">
+            <label>預期長期通膨率 (%)</label>
+            <input type="number" id="inflation" value="2.5" step="0.1" oninput="runSimulation()">
+        </div>
+
         <div class="stat-grid">
             <div class="stat-item">
-                <label>退休時帳面總額</label>
-                <div id="nominalFinal" class="stat-val">$0</div>
+                <label>退休時總資產</label>
+                <div id="atRetire" class="stat-val">$0</div>
             </div>
             <div class="stat-item">
-                <label>退休時實質價值</label>
-                <div id="realFinal" class="stat-val" style="color:var(--secondary)">$0</div>
+                <label>資金耗盡年齡</label>
+                <div id="depletionAge" class="stat-val" style="color:var(--secondary)">100+</div>
+            </div>
+            <div id="warningBox" class="depletion-warning" style="display:none;">
+                ⚠️ 資金將在 <span id="failAge">0</span> 歲耗盡！
             </div>
         </div>
     </div>
@@ -90,84 +89,95 @@
 let chart;
 
 function runSimulation() {
-    // 取得年齡參數
     const curAge = parseInt(document.getElementById('currentAge').value) || 0;
     const retAge = parseInt(document.getElementById('retireAge').value) || 0;
-    const years = retAge - curAge;
-    document.getElementById('durationText').innerText = years > 0 ? years : 0;
-
-    // 取得其他財務參數
     const P = parseFloat(document.getElementById('principal').value) || 0;
     const PMT = parseFloat(document.getElementById('monthly').value) || 0;
-    const sPct = (parseFloat(document.getElementById('stockPct').value) || 0) / 100;
-    document.getElementById('sLabel').innerText = (sPct * 100).toFixed(0);
-    document.getElementById('bLabel').innerText = (100 - sPct * 100).toFixed(0);
-    
-    const sRet = (parseFloat(document.getElementById('stockRet').value) || 0) / 100;
-    const bRet = (parseFloat(document.getElementById('bondRet').value) || 0) / 100;
-    const infRate = (parseFloat(document.getElementById('inflation').value) || 0) / 100;
+    const rate = (parseFloat(document.getElementById('returnRate').value) || 0) / 100;
+    const expense = parseFloat(document.getElementById('retireExpense').value) || 0;
+    const pension = parseFloat(document.getElementById('pension').value) || 0;
+    const inf = (parseFloat(document.getElementById('inflation').value) || 0) / 100;
 
-    const combinedRate = (sRet * sPct) + (bRet * (1 - sPct));
-    const monthlyRate = combinedRate / 12;
+    const mRate = rate / 12;
+    let labels = [], data = [], currentBalance = P;
+    let depletionAge = null;
 
-    let labels = [];
-    let nominalData = [];
-    let realData = [];
-    let currentNominal = P;
-
-    // 起點
+    // 累積階段
     labels.push(`${curAge}歲`);
-    nominalData.push(Math.round(currentNominal));
-    realData.push(Math.round(currentNominal));
+    data.push(Math.round(currentBalance));
 
-    // 如果退休年齡小於現在年齡，不執行計算
-    if (years > 0) {
-        for (let y = 1; y <= years; y++) {
+    for (let age = curAge + 1; age <= 100; age++) {
+        if (age <= retAge) {
+            // 累積邏輯 
             for (let m = 1; m <= 12; m++) {
-                currentNominal = (currentNominal + PMT) * (1 + monthlyRate);
+                currentBalance = (currentBalance + PMT) * (1 + mRate);
             }
-            let currentReal = currentNominal / Math.pow((1 + infRate), y);
-            
-            // X 軸改為顯示實際年齡
-            labels.push(`${curAge + y}歲`);
-            nominalData.push(Math.round(currentNominal));
-            realData.push(Math.round(currentReal));
+        } else {
+            // 提領邏輯 
+            // 生活費隨通膨調整
+            const adjustedShortfall = (expense - pension) * 12 * Math.pow(1 + inf, age - curAge);
+            currentBalance = (currentBalance - adjustedShortfall) * (1 + rate);
+        }
+
+        labels.push(`${age}歲`);
+        const roundedBalance = Math.max(0, Math.round(currentBalance));
+        data.push(roundedBalance);
+
+        if (roundedBalance === 0 && depletionAge === null) {
+            depletionAge = age;
         }
     }
 
-    document.getElementById('nominalFinal').innerText = `$ ${nominalData[nominalData.length-1].toLocaleString()}`;
-    document.getElementById('realFinal').innerText = `$ ${realData[realData.length-1].toLocaleString()}`;
+    // UI 更新
+    const atRetireVal = data[retAge - curAge] || 0;
+    document.getElementById('atRetire').innerText = `$ ${atRetireVal.toLocaleString()}`;
+    
+    const warn = document.getElementById('warningBox');
+    if (depletionAge && depletionAge < 100) {
+        document.getElementById('depletionAge').innerText = `${depletionAge} 歲`;
+        document.getElementById('failAge').innerText = depletionAge;
+        warn.style.display = 'block';
+    } else {
+        document.getElementById('depletionAge').innerText = "100+ 歲";
+        warn.style.display = 'none';
+    }
 
-    // 圖表更新
+    // 圖表繪製
     if (chart) chart.destroy();
-    const ctx = document.getElementById('mainChart').getContext('2d');
-    chart = new Chart(ctx, {
+    chart = new Chart(document.getElementById('mainChart').getContext('2d'), {
         type: 'line',
         data: {
             labels: labels,
-            datasets: [
-                { label: '名目金額 (看得到的數字)', data: nominalData, borderColor: '#2563eb', borderWidth: 3, pointRadius: 0, tension: 0.3 },
-                { label: '實質購買力 (考慮通膨)', data: realData, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', fill: true, borderWidth: 3, pointRadius: 0, tension: 0.3 }
-            ]
+            datasets: [{
+                label: '帳面資產價值',
+                data: data,
+                borderColor: '#2563eb',
+                backgroundColor: (context) => {
+                    const ctx = context.chart.ctx;
+                    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                    gradient.addColorStop(0, 'rgba(37, 99, 235, 0.2)');
+                    gradient.addColorStop(1, 'rgba(239, 68, 68, 0.1)');
+                    return gradient;
+                },
+                fill: true,
+                tension: 0.3,
+                segment: {
+                    borderColor: ctx => ctx.p0.parsed.x + curAge >= retAge ? '#ef4444' : '#2563eb', // 退休後變紅色
+                }
+            }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom', labels: { font: { size: 12 } } },
-                tooltip: { mode: 'index', intersect: false }
-            },
-            scales: {
-                x: { ticks: { maxTicksLimit: 10 } },
-                y: { 
-                    beginAtZero: true,
-                    ticks: { callback: v => '$' + v.toLocaleString() } 
+            plugins: { 
+                tooltip: { mode: 'index', intersect: false },
+                annotation: { // 註解線可在這加入 (需另載套件，此處省略)
                 }
-            }
+            },
+            scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString() } } }
         }
     });
 }
-
 runSimulation();
 </script>
 </body>
