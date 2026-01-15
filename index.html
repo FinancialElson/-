@@ -3,20 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>進階財富模擬器 (含通膨調整)</title>
+    <title>進階財富模擬器 (手機優化版)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --primary: #2563eb; --secondary: #f59e0b; --bg: #f8fafc; }
-        body { font-family: system-ui, sans-serif; background: var(--bg); padding: 20px; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); padding: 20px; margin: 0; }
         .container { display: grid; grid-template-columns: 350px 1fr; gap: 20px; max-width: 1200px; margin: 0 auto; }
         .card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        h3 { margin-top: 0; color: #1e293b; }
         .input-group { margin-bottom: 1rem; }
         label { display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 5px; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
+        input[type="range"] { padding: 0; }
         .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .stat-item { background: #f1f5f9; padding: 10px; border-radius: 8px; text-align: center; }
-        .stat-val { font-size: 1.1rem; font-weight: bold; color: var(--primary); }
-        @media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
+        .stat-item { background: #f1f5f9; padding: 15px 10px; border-radius: 8px; text-align: center; }
+        .stat-val { font-size: 1.2rem; font-weight: bold; color: var(--primary); margin-top: 5px; }
+        
+        /* 圖表容器特別設定 */
+        .chart-container {
+            position: relative;
+            height: 400px; /* 預設高度 */
+            width: 100%;
+        }
+
+        /* 手機版優化 (螢幕寬度小於 900px) */
+        @media (max-width: 900px) {
+            body { padding: 10px; }
+            .container { grid-template-columns: 1fr; gap: 15px; }
+            .card { padding: 1.2rem; }
+            /* 讓圖表在手機上更高，佔據更多垂直空間 */
+            .chart-container {
+                height: 50vh; /* 使用視窗高度的 50% */
+                min-height: 350px; /* 最少要有 350px 高 */
+            }
+            .stat-val { font-size: 1.4rem; } /* 手機上數字再大一點 */
+        }
     </style>
 </head>
 <body>
@@ -26,30 +47,33 @@
         <h3>配置參數</h3>
         <div class="input-group">
             <label>初始本金 / 每月投入 ($)</label>
-            <div style="display: flex; gap: 5px;">
-                <input type="number" id="principal" value="100000" oninput="runSimulation()">
+            <div style="display: flex; gap: 8px;">
+                <input type="number" id="principal" value="0" oninput="runSimulation()">
                 <input type="number" id="monthly" value="10000" oninput="runSimulation()">
             </div>
         </div>
         <div class="input-group">
             <label>資產配置 (股票 % / 債券 %)</label>
-            <div style="display: flex; gap: 5px; align-items: center;">
-                <input type="number" id="stockPct" value="80" oninput="runSimulation()">
-                <span>/</span>
-                <input type="number" id="bondPct" value="20" disabled>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <input type="number" id="stockPct" value="100" oninput="runSimulation()">
+                <span style="font-weight:bold;">/</span>
+                <input type="number" id="bondPct" value="0" disabled style="background:#f1f5f9;">
             </div>
         </div>
         <div class="input-group">
             <label>預期年化 (股 / 債 / 通膨 %)</label>
-            <div style="display: flex; gap: 5px;">
+            <div style="display: flex; gap: 8px;">
                 <input type="number" id="stockRet" value="10" oninput="runSimulation()">
-                <input type="number" id="bondRet" value="4" oninput="runSimulation()">
+                <input type="number" id="bondRet" value="0" oninput="runSimulation()">
                 <input type="number" id="inflation" value="2.5" oninput="runSimulation()">
             </div>
         </div>
-        <div class="input-group">
-            <label>模擬年限: <span id="yearVal">30</span> 年</label>
-            <input type="range" id="years" min="1" max="50" value="30" oninput="runSimulation()">
+        <div class="input-group" style="margin-top: 1.5rem;">
+            <label style="display:flex; justify-content:space-between;">
+                <span>類比年限</span>
+                <span style="color:var(--primary); font-size:1.1rem;"><span id="yearVal">20</span> 年</span>
+            </label>
+            <input type="range" id="years" min="1" max="50" value="20" style="width:100%; margin-top:10px;" oninput="runSimulation()">
         </div>
         
         <div class="stat-grid">
@@ -65,7 +89,9 @@
     </div>
 
     <div class="card">
-        <canvas id="mainChart"></canvas>
+        <div class="chart-container">
+            <canvas id="mainChart"></canvas>
+        </div>
     </div>
 </div>
 
@@ -73,11 +99,14 @@
 let chart;
 
 function runSimulation() {
+    // --- 資料取得與計算邏輯 (保持不變) ---
     const P = parseFloat(document.getElementById('principal').value) || 0;
     const PMT = parseFloat(document.getElementById('monthly').value) || 0;
-    const sPct = (parseFloat(document.getElementById('stockPct').value) || 0) / 100;
-    const bPct = 1 - sPct;
-    document.getElementById('bondPct').value = (bPct * 100).toFixed(0);
+    let sPct = parseFloat(document.getElementById('stockPct').value) || 0;
+    if (sPct > 100) sPct = 100; if (sPct < 0) sPct = 0;
+    document.getElementById('stockPct').value = sPct; // 校正輸入
+    const bPct = 100 - sPct;
+    document.getElementById('bondPct').value = bPct.toFixed(0);
     
     const sRet = (parseFloat(document.getElementById('stockRet').value) || 0) / 100;
     const bRet = (parseFloat(document.getElementById('bondRet').value) || 0) / 100;
@@ -85,27 +114,24 @@ function runSimulation() {
     const years = parseInt(document.getElementById('years').value);
     document.getElementById('yearVal').innerText = years;
 
-    const combinedRate = (sRet * sPct) + (bRet * bPct);
+    const combinedRate = (sRet * (sPct/100)) + (bRet * (bPct/100));
     const monthlyRate = combinedRate / 12;
-    const monthlyInf = infRate / 12;
 
     let labels = [];
     let nominalData = [];
     let realData = [];
     
     let currentNominal = P;
-    let currentReal = P;
 
     labels.push("Start");
     nominalData.push(Math.round(currentNominal));
-    realData.push(Math.round(currentReal));
+    realData.push(Math.round(currentNominal));
 
     for (let y = 1; y <= years; y++) {
         for (let m = 1; m <= 12; m++) {
             currentNominal = (currentNominal + PMT) * (1 + monthlyRate);
         }
-        // 計算實質價值 (將帳面金額回推通膨)
-        currentReal = currentNominal / Math.pow((1 + infRate), y);
+        let currentReal = currentNominal / Math.pow((1 + infRate), y);
         
         labels.push(`第 ${y} 年`);
         nominalData.push(Math.round(currentNominal));
@@ -115,21 +141,93 @@ function runSimulation() {
     document.getElementById('nominalFinal').innerText = `$ ${nominalData[nominalData.length-1].toLocaleString()}`;
     document.getElementById('realFinal').innerText = `$ ${realData[realData.length-1].toLocaleString()}`;
 
+    // --- 圖表繪製 (重點修改處) ---
     if (chart) chart.destroy();
-    chart = new Chart(document.getElementById('mainChart'), {
+    const ctx = document.getElementById('mainChart').getContext('2d');
+    chart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
             datasets: [
-                { label: '帳面金額 (名目)', data: nominalData, borderColor: '#2563eb', backgroundColor: 'transparent', tension: 0.2 },
-                { label: '實質購買力 (扣除通膨)', data: realData, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', fill: true, tension: 0.2 }
+                {
+                    label: '帳面金額 (名目)',
+                    data: nominalData,
+                    borderColor: '#2563eb',
+                    backgroundColor: '#2563eb',
+                    borderWidth: 3,
+                    pointRadius: 2,
+                    tension: 0.3
+                },
+                {
+                    label: '實質購買力 (扣除通膨)',
+                    data: realData,
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                    borderWidth: 3,
+                    pointRadius: 2,
+                    fill: true,
+                    tension: 0.3
+                }
             ]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { mode: 'index', intersect: false } } }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false, // 重要：允許圖表不維持比例，填滿容器
+            plugins: {
+                legend: {
+                    position: 'bottom', // 將圖例移到下方
+                    labels: {
+                        padding: 20, // 增加間距
+                        font: {
+                            size: 14 // 加大字體
+                        },
+                        usePointStyle: true, // 使用圓點樣式，看起來更現代
+                        boxWidth: 10
+                    }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    padding: 10,
+                    bodyFont: { size: 14 },
+                    titleFont: { size: 14 }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        maxRotation: 45, // 避免標籤過度傾斜
+                        minRotation: 45,
+                        font: { size: 11 }
+                    },
+                    grid: { display: false } // 隱藏 X 軸網格，讓畫面更乾淨
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        font: { size: 11 },
+                        callback: function(value) {
+                            if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+                            if (value >= 1000) return (value / 1000).toFixed(0) + 'K';
+                            return value;
+                        }
+                    }
+                }
+            }
+        }
     });
 }
 
+// 初始執行
 runSimulation();
+
+// 監聽視窗大小改變，重新繪製圖表以適應新尺寸
+window.addEventListener('resize', () => {
+    if (chart) { chart.resize(); }
+});
 </script>
 </body>
 </html>
+
+```
+
