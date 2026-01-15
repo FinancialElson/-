@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>進階財富模擬器 (含通膨調整)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --primary: #2563eb; --secondary: #f59e0b; --bg: #f8fafc; }
+        body { font-family: system-ui, sans-serif; background: var(--bg); padding: 20px; }
+        .container { display: grid; grid-template-columns: 350px 1fr; gap: 20px; max-width: 1200px; margin: 0 auto; }
+        .card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .input-group { margin-bottom: 1rem; }
+        label { display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 5px; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .stat-item { background: #f1f5f9; padding: 10px; border-radius: 8px; text-align: center; }
+        .stat-val { font-size: 1.1rem; font-weight: bold; color: var(--primary); }
+        @media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <h3>配置參數</h3>
+        <div class="input-group">
+            <label>初始本金 / 每月投入 ($)</label>
+            <div style="display: flex; gap: 5px;">
+                <input type="number" id="principal" value="100000" oninput="runSimulation()">
+                <input type="number" id="monthly" value="10000" oninput="runSimulation()">
+            </div>
+        </div>
+        <div class="input-group">
+            <label>資產配置 (股票 % / 債券 %)</label>
+            <div style="display: flex; gap: 5px; align-items: center;">
+                <input type="number" id="stockPct" value="80" oninput="runSimulation()">
+                <span>/</span>
+                <input type="number" id="bondPct" value="20" disabled>
+            </div>
+        </div>
+        <div class="input-group">
+            <label>預期年化 (股 / 債 / 通膨 %)</label>
+            <div style="display: flex; gap: 5px;">
+                <input type="number" id="stockRet" value="10" oninput="runSimulation()">
+                <input type="number" id="bondRet" value="4" oninput="runSimulation()">
+                <input type="number" id="inflation" value="2.5" oninput="runSimulation()">
+            </div>
+        </div>
+        <div class="input-group">
+            <label>模擬年限: <span id="yearVal">30</span> 年</label>
+            <input type="range" id="years" min="1" max="50" value="30" oninput="runSimulation()">
+        </div>
+        
+        <div class="stat-grid">
+            <div class="stat-item">
+                <label>帳面總額</label>
+                <div id="nominalFinal" class="stat-val">$0</div>
+            </div>
+            <div class="stat-item">
+                <label>實質價值</label>
+                <div id="realFinal" class="stat-val" style="color:var(--secondary)">$0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <canvas id="mainChart"></canvas>
+    </div>
+</div>
+
+<script>
+let chart;
+
+function runSimulation() {
+    const P = parseFloat(document.getElementById('principal').value) || 0;
+    const PMT = parseFloat(document.getElementById('monthly').value) || 0;
+    const sPct = (parseFloat(document.getElementById('stockPct').value) || 0) / 100;
+    const bPct = 1 - sPct;
+    document.getElementById('bondPct').value = (bPct * 100).toFixed(0);
+    
+    const sRet = (parseFloat(document.getElementById('stockRet').value) || 0) / 100;
+    const bRet = (parseFloat(document.getElementById('bondRet').value) || 0) / 100;
+    const infRate = (parseFloat(document.getElementById('inflation').value) || 0) / 100;
+    const years = parseInt(document.getElementById('years').value);
+    document.getElementById('yearVal').innerText = years;
+
+    const combinedRate = (sRet * sPct) + (bRet * bPct);
+    const monthlyRate = combinedRate / 12;
+    const monthlyInf = infRate / 12;
+
+    let labels = [];
+    let nominalData = [];
+    let realData = [];
+    
+    let currentNominal = P;
+    let currentReal = P;
+
+    labels.push("Start");
+    nominalData.push(Math.round(currentNominal));
+    realData.push(Math.round(currentReal));
+
+    for (let y = 1; y <= years; y++) {
+        for (let m = 1; m <= 12; m++) {
+            currentNominal = (currentNominal + PMT) * (1 + monthlyRate);
+        }
+        // 計算實質價值 (將帳面金額回推通膨)
+        currentReal = currentNominal / Math.pow((1 + infRate), y);
+        
+        labels.push(`第 ${y} 年`);
+        nominalData.push(Math.round(currentNominal));
+        realData.push(Math.round(currentReal));
+    }
+
+    document.getElementById('nominalFinal').innerText = `$ ${nominalData[nominalData.length-1].toLocaleString()}`;
+    document.getElementById('realFinal').innerText = `$ ${realData[realData.length-1].toLocaleString()}`;
+
+    if (chart) chart.destroy();
+    chart = new Chart(document.getElementById('mainChart'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                { label: '帳面金額 (名目)', data: nominalData, borderColor: '#2563eb', backgroundColor: 'transparent', tension: 0.2 },
+                { label: '實質購買力 (扣除通膨)', data: realData, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', fill: true, tension: 0.2 }
+            ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { mode: 'index', intersect: false } } }
+    });
+}
+
+runSimulation();
+</script>
+</body>
+</html>
