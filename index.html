@@ -3,60 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全生命週期退休模擬器</title>
+    <title>極簡退休複利模擬器</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --primary: #2563eb; --secondary: #f59e0b; --danger: #ef4444; --success: #10b981; --bg: #f8fafc; }
+        :root { --primary: #2563eb; --secondary: #f59e0b; --danger: #ef4444; --bg: #f8fafc; }
         body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); padding: 15px; margin: 0; }
         .container { display: grid; grid-template-columns: 360px 1fr; gap: 20px; max-width: 1400px; margin: 0 auto; }
-        .card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        h3 { margin: 15px 0 10px 0; color: #1e293b; font-size: 1rem; border-left: 4px solid var(--primary); padding-left: 8px; }
-        h3:first-child { margin-top: 0; }
+        .card { background: white; padding: 1.5rem; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        h3 { margin: 15px 0 10px 0; color: #1e293b; font-size: 1rem; border-left: 4px solid var(--primary); padding-left: 10px; }
         .input-group { margin-bottom: 0.8rem; }
-        label { display: block; font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px; }
-        input { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.95rem; }
+        label { display: block; font-size: 0.8rem; font-weight: 600; color: #64748b; margin-bottom: 4px; }
+        input { width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; font-size: 1rem; transition: border 0.2s; }
+        input:focus { border-color: var(--primary); outline: none; }
         
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 15px; }
-        .stat-item { background: #f1f5f9; padding: 10px; border-radius: 8px; text-align: center; }
-        .stat-val { font-size: 1rem; font-weight: bold; color: var(--primary); }
-        .depletion-warning { grid-column: span 2; background: #fff1f2; color: var(--danger); padding: 10px; border-radius: 8px; font-weight: bold; text-align: center; border: 1px solid #fecaca; }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        .stat-item { background: #f8fafc; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #f1f5f9; }
+        .stat-val { font-size: 1.1rem; font-weight: bold; color: var(--primary); }
         
         .chart-container { position: relative; height: 550px; width: 100%; }
-        @media (max-width: 900px) { .container { grid-template-columns: 1fr; } .chart-container { height: 60vh; } }
+        @media (max-width: 900px) { .container { grid-template-columns: 1fr; } .chart-container { height: 50vh; } }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="card">
-        <h3>1. 累積階段 (現在到退休)</h3>
+        <h3>1. 累積階段 (壯年期)</h3>
         <div class="input-group">
             <label>年齡 (現在 / 退休)</label>
-            <div style="display: flex; gap: 5px;">
+            <div style="display: flex; gap: 8px;">
                 <input type="number" id="currentAge" value="30" oninput="runSimulation()">
                 <input type="number" id="retireAge" value="65" oninput="runSimulation()">
             </div>
         </div>
         <div class="input-group">
             <label>初始本金 / 每月投入 ($)</label>
-            <div style="display: flex; gap: 5px;">
+            <div style="display: flex; gap: 8px;">
                 <input type="number" id="principal" value="100000" oninput="runSimulation()">
-                <input type="number" id="monthly" value="15000" oninput="runSimulation()">
+                <input type="number" id="monthly" value="20000" oninput="runSimulation()">
             </div>
         </div>
         <div class="input-group">
             <label>預期年化報酬率 (%)</label>
-            <input type="number" id="returnRate" value="7" step="0.1" oninput="runSimulation()">
+            <input type="number" id="returnRate" value="8" step="0.5" oninput="runSimulation()">
         </div>
 
-        <h3>2. 提領階段 (退休後)</h3>
+        <h3>2. 提領階段 (退休期)</h3>
         <div class="input-group">
-            <label>退休後每月生活費 (今日物價)</label>
-            <input type="number" id="retireExpense" value="50000" oninput="runSimulation()">
-        </div>
-        <div class="input-group">
-            <label>每月政府年金 (勞保+勞退預估)</label>
-            <input type="number" id="pension" value="25000" oninput="runSimulation()">
+            <label>每月生活費 / 政府年金 ($)</label>
+            <div style="display: flex; gap: 8px;">
+                <input type="number" id="retireExpense" value="60000" oninput="runSimulation()">
+                <input type="number" id="pension" value="25000" oninput="runSimulation()">
+            </div>
         </div>
         <div class="input-group">
             <label>預期長期通膨率 (%)</label>
@@ -69,11 +67,8 @@
                 <div id="atRetire" class="stat-val">$0</div>
             </div>
             <div class="stat-item">
-                <label>資金耗盡年齡</label>
+                <label>預估壽命</label>
                 <div id="depletionAge" class="stat-val" style="color:var(--secondary)">100+</div>
-            </div>
-            <div id="warningBox" class="depletion-warning" style="display:none;">
-                ⚠️ 資金將在 <span id="failAge">0</span> 歲耗盡！
             </div>
         </div>
     </div>
@@ -102,19 +97,15 @@ function runSimulation() {
     let labels = [], data = [], currentBalance = P;
     let depletionAge = null;
 
-    // 累積階段
     labels.push(`${curAge}歲`);
     data.push(Math.round(currentBalance));
 
     for (let age = curAge + 1; age <= 100; age++) {
         if (age <= retAge) {
-            // 累積邏輯 
             for (let m = 1; m <= 12; m++) {
                 currentBalance = (currentBalance + PMT) * (1 + mRate);
             }
         } else {
-            // 提領邏輯 
-            // 生活費隨通膨調整
             const adjustedShortfall = (expense - pension) * 12 * Math.pow(1 + inf, age - curAge);
             currentBalance = (currentBalance - adjustedShortfall) * (1 + rate);
         }
@@ -128,53 +119,55 @@ function runSimulation() {
         }
     }
 
-    // UI 更新
-    const atRetireVal = data[retAge - curAge] || 0;
-    document.getElementById('atRetire').innerText = `$ ${atRetireVal.toLocaleString()}`;
-    
-    const warn = document.getElementById('warningBox');
-    if (depletionAge && depletionAge < 100) {
-        document.getElementById('depletionAge').innerText = `${depletionAge} 歲`;
-        document.getElementById('failAge').innerText = depletionAge;
-        warn.style.display = 'block';
-    } else {
-        document.getElementById('depletionAge').innerText = "100+ 歲";
-        warn.style.display = 'none';
-    }
+    document.getElementById('atRetire').innerText = `$ ${(data[retAge - curAge] || 0).toLocaleString()}`;
+    document.getElementById('depletionAge').innerText = depletionAge ? `${depletionAge} 歲` : "100+ 歲";
 
-    // 圖表繪製
     if (chart) chart.destroy();
-    chart = new Chart(document.getElementById('mainChart').getContext('2d'), {
+    const ctx = document.getElementById('mainChart').getContext('2d');
+    chart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
             datasets: [{
-                label: '帳面資產價值',
+                label: '資產價值軌跡',
                 data: data,
                 borderColor: '#2563eb',
-                backgroundColor: (context) => {
-                    const ctx = context.chart.ctx;
-                    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-                    gradient.addColorStop(0, 'rgba(37, 99, 235, 0.2)');
-                    gradient.addColorStop(1, 'rgba(239, 68, 68, 0.1)');
-                    return gradient;
-                },
+                borderWidth: 3,
+                pointRadius: 0, // 移除點
+                pointHitRadius: 10, // 增加懸停感應範圍以便顯示 Tooltip
                 fill: true,
-                tension: 0.3,
+                backgroundColor: 'rgba(37, 99, 235, 0.05)',
+                tension: 0.4, // 增加線條平滑感
                 segment: {
-                    borderColor: ctx => ctx.p0.parsed.x + curAge >= retAge ? '#ef4444' : '#2563eb', // 退休後變紅色
+                    borderColor: ctx => ctx.p0.parsed.x + curAge >= retAge ? '#ef4444' : '#2563eb',
                 }
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { 
-                tooltip: { mode: 'index', intersect: false },
-                annotation: { // 註解線可在這加入 (需另載套件，此處省略)
+            plugins: {
+                legend: { display: false },
+                tooltip: { 
+                    mode: 'index', 
+                    intersect: false,
+                    callbacks: {
+                        label: (ctx) => `資產: $${ctx.raw.toLocaleString()}`
+                    }
                 }
             },
-            scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString() } } }
+            scales: {
+                y: { 
+                    beginAtZero: true, 
+                    ticks: { 
+                        font: { size: 11 },
+                        callback: v => '$' + v.toLocaleString() 
+                    } 
+                },
+                x: {
+                    ticks: { maxTicksLimit: 12, font: { size: 11 } }
+                }
+            }
         }
     });
 }
@@ -182,5 +175,3 @@ runSimulation();
 </script>
 </body>
 </html>
-
-
